@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use super::{Expected, Runner, Test};
 use crate::cargo;
+use crate::command;
 use crate::dependencies::{self, Dependency};
 use crate::env::Update;
 use crate::error::{Error, Result};
@@ -39,7 +40,7 @@ impl Runner {
         });
 
         print!("\n\n");
-
+ 
         let len = tests.len();
         let mut failures = 0;
 
@@ -47,6 +48,7 @@ impl Runner {
             message::no_tests_enabled();
         } else {
             for test in tests {
+                //println!("TEST NAME: {:?}", test.test.path);
                 if let Err(err) = test.run(&project) {
                     failures += 1;
                     message::test_fail(err);
@@ -74,6 +76,7 @@ impl Runner {
             match e.test.expected {
                 Expected::Pass => has_pass = true,
                 Expected::CompileFail => has_compile_fail = true,
+                Expected::Stdout => has_pass = true,
             }
         }
 
@@ -196,11 +199,15 @@ impl Test {
         let show_expected = project.has_pass && project.has_compile_fail;
         message::begin_test(self, show_expected);
         check_exists(&self.path)?;
+        
+        let output = match self.exe_path {
+            Some(p) => command::build_test_exe(&self.path.to_str().expect("bad path to test file"), p)?,
+            None => cargo::build_test(project, name)?,
+        };
 
-        let output = cargo::build_test(project, name)?;
         let success = output.status.success();
         let stdout = output.stdout;
-        let stderr = normalize::diagnostics(output.stderr).map(|stderr| {
+        let mut stderr = normalize::diagnostics(output.stderr).map(|stderr| {
             stderr
                 .replace(&name.0, "$CRATE")
                 .replace(project.source_dir.to_string_lossy().as_ref(), "$DIR")
@@ -209,10 +216,43 @@ impl Test {
         let check = match self.expected {
             Expected::Pass => Test::check_pass,
             Expected::CompileFail => Test::check_compile_fail,
+            Expected::Stdout => {
+                stderr = normalize::diagnostics(stdout.clone()).map(|stdout| {
+                    stdout
+                        .replace(&name.0, "$CRATE")
+                        .replace(project.source_dir.to_string_lossy().as_ref(), "$DIR")
+                });
+                Test::check_stdout
+            },
         };
+
+        
 
         check(self, project, name, success, stdout, stderr)
     }
+
+    fn check_stdout (
+        &self,
+        project: &Project,
+        name: &Name,
+        success: bool,
+        build_stdout: Vec<u8>,
+        variations: Variations,
+    ) -> Result<()> {
+        Test::check_stderr_or_stdout(self, project, name, success, build_stdout, variations, false)
+    }
+
+    fn check_compile_fail (
+        &self,
+        project: &Project,
+        name: &Name,
+        success: bool,
+        build_stdout: Vec<u8>,
+        variations: Variations,
+    ) -> Result<()> {
+        Test::check_stderr_or_stdout(self, project, name, success, build_stdout, variations, true)
+    }
+
 
     fn check_pass(
         &self,
@@ -238,24 +278,28 @@ impl Test {
         }
     }
 
-    fn check_compile_fail(
+    fn check_stderr_or_stdout(
         &self,
         project: &Project,
         _name: &Name,
         success: bool,
         build_stdout: Vec<u8>,
         variations: Variations,
+        is_stderr: bool,
     ) -> Result<()> {
         let preferred = variations.preferred();
 
-        if success {
+        if success && is_stderr {
             message::should_not_have_compiled();
             message::fail_output(Fail, &build_stdout);
             message::warnings(preferred);
             return Err(Error::ShouldNotHaveCompiled);
         }
-
-        let stderr_path = self.path.with_extension("stderr");
+        
+        let stderr_path = match is_stderr {
+            true => self.path.with_extension("stderr"),
+            false => self.path.with_extension("stdout")
+        };
 
         if !stderr_path.exists() {
             match project.update {
@@ -280,11 +324,16 @@ impl Test {
             return Ok(());
         }
 
-        let expected = fs::read_to_string(&stderr_path)
-            .map_err(Error::ReadStderr)?
-            .replace("\r\n", "\n");
+        let expected = match is_stderr {
+            true => fs::read_to_string(&stderr_path)
+                .map_err(Error::ReadStderr)?
+                .replace("\r\n", "\n"),
+            false => fs::read_to_string(&stderr_path)
+                .map_err(Error::ReadStdout)?
+                .replace("\r\n", "\n")
+        };
 
-        if variations.any(|stderr| expected == stderr) {
+        if variations.any(|actual| expected == actual) {
             message::ok();
             return Ok(());
         }
@@ -351,6 +400,7 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
                                 test: Test {
                                     path,
                                     expected: expanded.test.expected,
+                                    exe_path: test.exe_path,
                                 },
                                 error: None,
                             });

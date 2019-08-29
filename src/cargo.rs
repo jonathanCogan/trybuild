@@ -41,6 +41,7 @@ pub fn build_dependencies(project: &Project) -> Result<()> {
 }
 
 pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
+    println!("BUILD TEST");
     let _ = cargo(project)
         .arg("clean")
         .arg("--package")

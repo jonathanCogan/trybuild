@@ -207,6 +207,7 @@ mod term;
 mod path;
 
 mod cargo;
+mod command;
 mod dependencies;
 mod env;
 mod error;
@@ -216,6 +217,7 @@ mod message;
 mod normalize;
 mod run;
 mod rustflags;
+mod test;
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
@@ -235,12 +237,14 @@ struct Runner {
 struct Test {
     path: PathBuf,
     expected: Expected,
+    exe_path: Option<&'static str>,
 }
 
 #[derive(Copy, Clone, Debug)]
 enum Expected {
     Pass,
     CompileFail,
+    Stdout,
 }
 
 impl TestCases {
@@ -255,6 +259,7 @@ impl TestCases {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
             expected: Expected::Pass,
+            exe_path: None,
         });
     }
 
@@ -262,6 +267,23 @@ impl TestCases {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
             expected: Expected::CompileFail,
+            exe_path: None,
+        });
+    }
+
+    pub fn exe_compile_fail<P: AsRef<Path>>(&self, path: P, exe_path: &'static str) {
+        self.runner.borrow_mut().tests.push(Test {
+            path: path.as_ref().to_owned(),
+            expected: Expected::CompileFail,
+            exe_path: Some(exe_path),
+        });
+    }
+
+    pub fn exe_stdout<P: AsRef<Path>>(&self, path: P, exe_path: &'static str) {
+        self.runner.borrow_mut().tests.push(Test {
+            path: path.as_ref().to_owned(),
+            expected: Expected::Stdout,
+            exe_path: Some(exe_path),
         });
     }
 }

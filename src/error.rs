@@ -18,6 +18,7 @@ pub enum Error {
     PkgName(env::VarError),
     ProjectDir,
     ReadStderr(io::Error),
+    ReadStdout(io::Error),
     RunFailed,
     ShouldNotHaveCompiled,
     TomlDe(toml::de::Error),
@@ -44,6 +45,7 @@ impl Display for Error {
             PkgName(e) => write!(f, "failed to detect CARGO_PKG_NAME: {}", e),
             ProjectDir => write!(f, "failed to determine name of project dir"),
             ReadStderr(e) => write!(f, "failed to read stderr file: {}", e),
+            ReadStdout(e) => write!(f, "failed to read stdout file: {}", e),
             RunFailed => write!(f, "execution of the test case was unsuccessful"),
             ShouldNotHaveCompiled => {
                 write!(f, "expected test case to fail to compile, but it succeeded")
