@@ -237,7 +237,7 @@ struct Runner {
 struct Test {
     path: PathBuf,
     expected: Expected,
-    exe_path: Option<&'static str>,
+    exe_path: Option<(&'static str, &'static str)>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -245,6 +245,7 @@ enum Expected {
     Pass,
     CompileFail,
     Stdout,
+    Stderr,
 }
 
 impl TestCases {
@@ -271,19 +272,27 @@ impl TestCases {
         });
     }
 
-    pub fn exe_compile_fail<P: AsRef<Path>>(&self, path: P, exe_path: &'static str) {
+    pub fn exe_compile_fail<P: AsRef<Path>>(&self, path: P, exe_path: &'static str, args: &'static str) {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
             expected: Expected::CompileFail,
-            exe_path: Some(exe_path),
+            exe_path: Some((exe_path, args)),
         });
     }
 
-    pub fn exe_stdout<P: AsRef<Path>>(&self, path: P, exe_path: &'static str) {
+    pub fn exe_stdout<P: AsRef<Path>>(&self, path: P, exe_path: &'static str, args: &'static str) {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
             expected: Expected::Stdout,
-            exe_path: Some(exe_path),
+            exe_path: Some((exe_path, args)),
+        });
+    }
+
+    pub fn exe_stderr<P: AsRef<Path>>(&self, path: P, exe_path: &'static str, args: &'static str) {
+        self.runner.borrow_mut().tests.push(Test {
+            path: path.as_ref().to_owned(),
+            expected: Expected::Stderr,
+            exe_path: Some((exe_path, args)),
         });
     }
 }

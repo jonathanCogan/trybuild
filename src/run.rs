@@ -77,6 +77,7 @@ impl Runner {
                 Expected::Pass => has_pass = true,
                 Expected::CompileFail => has_compile_fail = true,
                 Expected::Stdout => has_pass = true,
+                Expected::Stderr => has_pass = true,
             }
         }
 
@@ -201,7 +202,7 @@ impl Test {
         check_exists(&self.path)?;
         
         let output = match self.exe_path {
-            Some(p) => command::build_test_exe(&self.path.to_str().expect("bad path to test file"), p)?,
+            Some(p) => command::build_test_exe(&self.path.to_str().expect("bad path to test file"), p.0, p.1)?,
             None => cargo::build_test(project, name)?,
         };
 
@@ -224,6 +225,7 @@ impl Test {
                 });
                 Test::check_stdout
             },
+            Expected::Stderr => Test::check_stdout,
         };
 
         
