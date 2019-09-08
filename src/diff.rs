@@ -12,15 +12,18 @@ pub fn print_diff(expected: &str, actual: &str) {
         match diffs[i] {
             Difference::Same(ref x) => {
                 t.fg(term::color::WHITE).unwrap();
-                writeln!(t, "{}", x);
+                let s = x.replace('\n', "\n ");
+                writeln!(t, " {}", s.as_str());
             }
             Difference::Add(ref x) => {
                 t.fg(term::color::GREEN).unwrap();
-                writeln!(t, "+{}", x);
+                let s = x.replace('\n', "\n+");
+                writeln!(t, "+{}", s.as_str());
             }
             Difference::Rem(ref x) => {
                 t.fg(term::color::RED).unwrap();
-                writeln!(t, "-{}", x);
+                let s = x.replace('\n', "\n-");
+                writeln!(t, "-{}", s.as_str());
             }
         }
     }
