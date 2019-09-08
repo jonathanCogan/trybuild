@@ -16,11 +16,11 @@ pub fn print_diff(expected: &str, actual: &str) {
             }
             Difference::Add(ref x) => {
                 t.fg(term::color::GREEN).unwrap();
-                writeln!(t, "+{}", &x[1..]);
+                writeln!(t, "+{}", x);
             }
             Difference::Rem(ref x) => {
                 t.fg(term::color::RED).unwrap();
-                writeln!(t, "-{}", &x[1..]);
+                writeln!(t, "-{}", x);
             }
         }
     }
