@@ -218,6 +218,7 @@ mod normalize;
 mod run;
 mod rustflags;
 mod test;
+mod diff;
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};

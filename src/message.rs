@@ -4,6 +4,7 @@ use super::{Expected, Test};
 use crate::error::Error;
 use crate::normalize;
 use crate::term;
+use crate::diff;
 
 use std::path::Path;
 use std::process::Output;
@@ -127,7 +128,9 @@ pub(crate) fn overwrite_stderr(stderr_path: &Path, stderr: &str) {
 }
 
 pub(crate) fn mismatch(expected: &str, actual: &str) {
-    term::bold_color(Red);
+
+    diff::print_diff(expected, actual);
+    /*term::bold_color(Red);
     println!("mismatch");
     term::reset();
     println!();
@@ -138,7 +141,7 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     term::bold_color(Red);
     println!("ACTUAL OUTPUT:");
     snippet(Red, actual);
-    println!();
+    println!();*/
 }
 
 pub(crate) fn output(warnings: &str, output: &Output) {
